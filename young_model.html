@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>杨氏模量计算模拟器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .simulation-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .control-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .chart-container {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ced4da;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .results {
+            background: #e8f4fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .material-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ffc107;
+        }
+        
+        .deformation-viz {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .beam-container {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .beam {
+            position: absolute;
+            background: #6c757d;
+            transition: all 0.5s ease;
+            transform-origin: left center;
+        }
+        
+        .force-arrow {
+            position: absolute;
+            color: #dc3545;
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 杨氏模量计算模拟器</h1>
+        
+        <div class="simulation-grid">
+            <div class="control-panel">
+                <h3>📋 参数设置</h3>
+                
+                <div class="input-group">
+                    <label for="material">材料选择:</label>
+                    <select id="material">
+                        <option value="steel">钢 (E = 200 GPa)</option>
+                        <option value="aluminum">铝 (E = 70 GPa)</option>
+                        <option value="copper">铜 (E = 110 GPa)</option>
+                        <option value="concrete">混凝土 (E = 30 GPa)</option>
+                        <option value="wood">木材 (E = 12 GPa)</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label for="simulationType">模拟类型:</label>
+                    <select id="simulationType">
+                        <option value="tension">拉伸试验</option>
+                        <option value="beam">悬臂梁弯曲</option>
+                        <option value="compression">压缩试验</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label for="force">载荷 (N):</label>
+                    <input type="number" id="force" value="10000" min="0" step="1000">
+                </div>
+                
+                <div class="input-group">
+                    <label for="length">长度 (m):</label>
+                    <input type="number" id="length" value="1.0" min="0.1" step="0.1">
+                </div>
+                
+                <div class="input-group">
+                    <label for="width">宽度 (m):</label>
+                    <input type="number" id="width" value="0.05" min="0.01" step="0.01">
+                </div>
+                
+                <div class="input-group">
+                    <label for="height">高度/厚度 (m):</label>
+                    <input type="number" id="height" value="0.01" min="0.001" step="0.001">
+                </div>
+                
+                <button onclick="runSimulation()">🚀 运行模拟</button>
+                
+                <div id="materialInfo" class="material-info">
+                    选择材料查看其属性
+                </div>
+                
+                <div id="results" class="results" style="display: none;">
+                    <h4>📊 计算结果</h4>
+                    <div id="resultContent"></div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3>📈 应力-应变曲线</h3>
+                <canvas id="stressStrainChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+        
+        <div class="deformation-viz">
+            <h3>🏗️ 变形可视化</h3>
+            <div class="beam-container" id="beamContainer">
+                <div class="beam" id="beam"></div>
+                <div class="force-arrow" id="forceArrow">↓</div>
+            </div>
+            <p id="deformationText">加载后的变形效果将在这里显示</p>
+        </div>
+    </div>
+
+    <script>
+        // 材料数据库
+        const materials = {
+            steel: { E: 200e9, density: 7850, name: "钢", color: "#6c757d" },
+            aluminum: { E: 70e9, density: 2700, name: "铝", color: "#adb5bd" },
+            copper: { E: 110e9, density: 8960, name: "铜", color: "#fd7e14" },
+            concrete: { E: 30e9, density: 2400, name: "混凝土", color: "#6f42c1" },
+            wood: { E: 12e9, density: 600, name: "木材", color: "#795548" }
+        };
+
+        let chart = null;
+
+        // 更新材料信息
+        function updateMaterialInfo() {
+            const material = document.getElementById('material').value;
+            const info = materials[material];
+            document.getElementById('materialInfo').innerHTML = `
+                <strong>${info.name}</strong><br>
+                杨氏模量: ${(info.E / 1e9).toFixed(0)} GPa<br>
+                密度: ${info.density} kg/m³
+            `;
+        }
+
+        // 运行模拟
+        function runSimulation() {
+            const material = document.getElementById('material').value;
+            const type = document.getElementById('simulationType').value;
+            const force = parseFloat(document.getElementById('force').value);
+            const length = parseFloat(document.getElementById('length').value);
+            const width = parseFloat(document.getElementById('width').value);
+            const height = parseFloat(document.getElementById('height').value);
+
+            const E = materials[material].E;
+            const area = width * height;
+
+            let results = {};
+
+            if (type === 'tension') {
+                results = simulateTension(E, force, area, length, material);
+            } else if (type === 'beam') {
+                results = simulateBeam(E, force, length, width, height, material);
+            } else if (type === 'compression') {
+                results = simulateCompression(E, force, area, length, material);
+            }
+
+            displayResults(results);
+            updateChart(results);
+            visualizeDeformation(results, type);
+        }
+
+        // 拉伸试验模拟
+        function simulateTension(E, force, area, length, material) {
+            const stress = force / area;
+            const strain = stress / E;
+            const deltaL = strain * length;
+
+            return {
+                type: '拉伸试验',
+                material: materials[material].name,
+                stress: stress,
+                strain: strain,
+                deltaL: deltaL,
+                E: E,
+                force: force,
+                area: area,
+                length: length
+            };
+        }
+
+        // 悬臂梁模拟
+        function simulateBeam(E, force, length, width, height, material) {
+            const I = (width * Math.pow(height, 3)) / 12;
+            const maxDeflection = (force * Math.pow(length, 3)) / (3 * E * I);
+            const maxStress = (force * length * height) / (2 * I);
+
+            return {
+                type: '悬臂梁弯曲',
+                material: materials[material].name,
+                maxDeflection: maxDeflection,
+                maxStress: maxStress,
+                I: I,
+                E: E,
+                force: force,
+                length: length
+            };
+        }
+
+        // 压缩试验模拟
+        function simulateCompression(E, force, area, length, material) {
+            const stress = force / area;
+            const strain = stress / E;
+            const deltaL = strain * length;
+
+            return {
+                type: '压缩试验',
+                material: materials[material].name,
+                stress: stress,
+                strain: strain,
+                deltaL: Math.abs(deltaL),
+                E: E,
+                force: force,
+                area: area,
+                length: length
+            };
+        }
+
+        // 显示结果
+        function displayResults(results) {
+            const resultDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultContent');
+
+            let content = `
+                <div class="result-item">
+                    <span>模拟类型:</span>
+                    <span>${results.type}</span>
+                </div>
+                <div class="result-item">
+                    <span>材料:</span>
+                    <span>${results.material}</span>
+                </div>
+            `;
+
+            if (results.stress !== undefined) {
+                content += `
+                    <div class="result-item">
+                        <span>应力:</span>
+                        <span>${(results.stress / 1e6).toFixed(2)} MPa</span>
+                    </div>
+                    <div class="result-item">
+                        <span>应变:</span>
+                        <span>${(results.strain * 1000).toFixed(4)} ‰</span>
+                    </div>
+                    <div class="result-item">
+                        <span>变形量:</span>
+                        <span>${(results.deltaL * 1000).toFixed(3)} mm</span>
+                    </div>
+                `;
+            }
+
+            if (results.maxDeflection !== undefined) {
+                content += `
+                    <div class="result-item">
+                        <span>最大挠度:</span>
+                        <span>${(results.maxDeflection * 1000).toFixed(3)} mm</span>
+                    </div>
+                    <div class="result-item">
+                        <span>最大应力:</span>
+                        <span>${(results.maxStress / 1e6).toFixed(2)} MPa</span>
+                    </div>
+                `;
+            }
+
+            contentDiv.innerHTML = content;
+            resultDiv.style.display = 'block';
+        }
+
+        // 更新图表
+        function updateChart(results) {
+            const ctx = document.getElementById('stressStrainChart').getContext('2d');
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            const data = [];
+            const labels = [];
+
+            if (results.stress !== undefined) {
+                // 生成应力-应变曲线数据点
+                for (let i = 0; i <= 100; i++) {
+                    const strain = (i / 100) * results.strain * 2;
+                    const stress = results.E * strain;
+                    labels.push((strain * 1000).toFixed(2));
+                    data.push(stress / 1e6);
+                }
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '应力 (MPa)',
+                        data: data,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0,
+                        pointRadius: 0,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '应变 (‰)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '应力 (MPa)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // 可视化变形
+        function visualizeDeformation(results, type) {
+            const beam = document.getElementById('beam');
+            const container = document.getElementById('beamContainer');
+            const forceArrow = document.getElementById('forceArrow');
+            const text = document.getElementById('deformationText');
+
+            // 重置
+            beam.style.transform = '';
+            beam.style.left = '20px';
+            beam.style.top = '95px';
+            beam.style.width = '300px';
+            beam.style.height = '10px';
+
+            if (type === 'tension') {
+                const elongation = Math.min(results.deltaL * 1000, 50); // 限制最大显示变形
+                beam.style.width = `${300 + elongation}px`;
+                forceArrow.style.left = '330px';
+                forceArrow.style.top = '95px';
+                forceArrow.innerHTML = '→';
+                text.innerHTML = `拉伸变形: ${(results.deltaL * 1000).toFixed(3)} mm`;
+            } else if (type === 'beam') {
+                const deflection = Math.min(results.maxDeflection * 1000, 80);
+                beam.style.transformOrigin = 'left center';
+                beam.style.transform = `rotate(${deflection * 0.1}deg)`;
+                forceArrow.style.left = '300px';
+                forceArrow.style.top = '70px';
+                forceArrow.innerHTML = '↓';
+                text.innerHTML = `最大挠度: ${(results.maxDeflection * 1000).toFixed(3)} mm`;
+            } else if (type === 'compression') {
+                const compression = Math.min(results.deltaL * 1000, 30);
+                beam.style.width = `${300 - compression}px`;
+                forceArrow.style.left = '50px';
+                forceArrow.style.top = '95px';
+                forceArrow.innerHTML = '←';
+                text.innerHTML = `压缩变形: ${(results.deltaL * 1000).toFixed(3)} mm`;
+            }
+        }
+
+        // 初始化
+        document.getElementById('material').addEventListener('change', updateMaterialInfo);
+        updateMaterialInfo();
+        runSimulation();
+    </script>
+</body>
+</html>
